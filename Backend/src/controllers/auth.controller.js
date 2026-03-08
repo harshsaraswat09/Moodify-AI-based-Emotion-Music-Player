@@ -2,6 +2,8 @@ const userModel = require('../models/user.model')
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 
+const blacklistModel = require("../models/blacklist.model")
+
 
 // User registration controller
 async function registerUser(req, res) {
@@ -73,7 +75,7 @@ async function loginUser(req, res) {
             { email },      // email se login
             { username }    // username se login
         ]
-    })
+    }).select("+password")
 
     // Agar user database me nahi mila to invalid credentials return karna
     if (!user) {
@@ -83,7 +85,7 @@ async function loginUser(req, res) {
     }
 
     // User ke entered password ko database ke hashed password se compare karna
-    const isPasswordValid = await bcrypt.compare(password, user.password)
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     // Agar password match nahi karta to error return karna
     if (!isPasswordValid) {
@@ -119,4 +121,30 @@ async function loginUser(req, res) {
 }
 
 
-module.exports = { registerUser, loginUser }
+async function getMe(req, res) {
+    const user = await userModel.findById(req.user.id)
+
+    res.status(200).json({
+        message: "User fetched successfully",
+        user
+    })
+}
+
+
+async function logoutUser(req, res) {
+    
+    const token = req.cookies.token
+
+    res.clearCookie("token")
+
+    await blacklistModel.create({
+        token
+    })
+
+    res.status(200).json({
+        message: "logout Successfully"
+    })
+}
+
+
+module.exports = { registerUser, loginUser, getMe, logoutUser }
